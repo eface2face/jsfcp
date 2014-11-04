@@ -40,6 +40,7 @@ Copy the browserified and minified version into your web tree and load it as usu
 
     <script src='js/jsfcp-X.Y.Z.min.js'></script>
 
+    !html
     <script>
         var participant = new JsFCP.Participant(conferenceId, userId, wss, floors);
     </script>
