@@ -40,9 +40,8 @@ Copy the browserified and minified version into your web tree and load it as usu
 
     <script src='js/jsfcp-X.Y.Z.min.js'></script>
 
-    !html
     <script>
-        var participant = new JsFCP.Participant(conferenceId, userId, wss, floors);
+        var participant = new JsFCP.Participant(conferenceId, userId, ws_uri, floorIds);
     </script>
 
 
@@ -60,4 +59,39 @@ And load it as usual:
 
     var JsFCP = require('jsfcp');
 
-    var participant = new JsFCP.Participant(conferenceId, userId, wss, floors);
+    var participant = new JsFCP.Participant(conferenceId, userId, ws_uri, floorIds);
+
+
+## API
+
+### JsFCP.Participant
+
+The main class. It represents a peer that connects via WebSocket to the BFCP server to send and receive BFCP messages.
+
+#### new JsFCP.Participant(conferenceId, userId, ws_uri, floorIds)
+
+Parameters:
+* `conferenceId` {Integer}: The conference id.
+* `userId` {Integer}: The user id.
+* `ws_uri` {String}: The WebSocket URI.
+* `floorIds`{Array<Integer>}: Array of floor ids.
+
+#### requestFloor(events, floorIds, beneficiaryId=null, priority=null, participantProvidedInfo=null)
+
+Request one or varios floors.
+
+Parameters:
+* `events` {Object}: Object with the desired callbacks:
+  * `pending` {Function}: Called when the FloorRequest gets "Pending" status.
+  * `accepted` {Function}: Called when the FloorRequest gets "Accepted" status.
+  * `granted` {Function}: Called when the FloorRequest gets "Granted" status.
+  * `deined` {Function}: Called when the FloorRequest gets "Denied" status. The FloorRequest has terminated.
+  * `cancelled` {Function}: Called when the FloorRequest gets "Cancelled" status (which means that the user has released it before owning it). The FloorRequest has terminated.
+  * `released` {Function}: Called when the FloorRequest gets "Released" status (which means that the user or other participant in his behalf has released it). The FloorRequest has terminated.
+  * `revoked` {Function}: Called when the FloorRequest gets a "Revoked" status (which means that the server has revoked the floor). The FloorRequest has terminated.
+  * `error` {Function}: Called when something was wrong with the FloorRequest (may be a BFCP error, JS error, connection error...).
+* `floorIds`{Array<Integer>}: The requested floor Ids. The method raises an error if at least one of the floors does not match the list of `floorIds` provided to the `Participant` construtor).
+* `beneficiaryId` {Integer}: The id of the beneficiary for the requested floors (when it is not the same user as the participant).
+* `participantProvidedInfo` {Object}: Additional information about the participant (*TODO:* what?).
+
+Returns: An instance of `JsFCP.FloorRequest`.
