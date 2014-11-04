@@ -1,0 +1,5 @@
+- He cambiado los nombres de eventos. Están documentados en cada clase.
+
+- Me he cargado el EventType y no se expose la clase Event. emit() ya no recibe self como segundo parámetro.
+
+- En FloorRequest y FloorRelease, en onErrorReceived() llamo a this.onError() pasando un objeto con errorCode y errorInfo, en vez de un JsFCP.Event (que ya no existe públicamente).

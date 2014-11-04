@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Testing</title>
+        <link rel="stylesheet" type="text/css" href="qunit/qunit-1.14.0.css">
+        <script type="text/javascript" src="qunit/qunit-1.14.0.js"></script>
+        <script type="text/javascript" src="jquery.min.js"></script>
+        <script type="text/javascript" src="test.js"></script>
+        <script type="text/javascript" src="../build/jsfcp-last.js"></script>
+    </head>
+    <body>
+     	<script>
+     	var
+	    	userId,
+	    	conferenceId,
+	    	wss;
+
+    	var protocol;
+
+    	function runServerCon()
+    	{
+    		userId = 1;
+    		conferenceId = 2;
+    		wss = "ws://localhost:8888";
+
+    		protocol = new JsFCP.Protocol(userId, conferenceId, wss);
+    	}
+
+        </script>
+        <div><button  onclick="runServerCon()">Run Server Connection </button></div>
+    	<div><button  onclick="QUnit.start()">Start QUnit</button></div>
+
+        <div id="qunit"></div>
+        <div id="qunit-fixture"></div>
+
+        <script>QUnit.start();</script>
+    </body>
+</html>

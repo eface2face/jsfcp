@@ -1,0 +1,6 @@
+/*
+ * JsFCP <%= pkg.version %>
+ * Copyright © 2014 eFace2Face, inc. All Rights Reserved
+ * License: private
+ */
+

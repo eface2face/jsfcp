@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="ISO-8859-1">
+	<title>Checking JsFCP </title>
+
+	<script type="text/javascript" src="jquery.min.js"></script>
+    <script type="text/javascript" src="4Agents.js"></script>
+    <script type="text/javascript" src="../build/jsfcp-last.js"></script>
+</head>
+<body>
+	<div width="100%" id="mainDiv">
+	<table width="100%" id="testTable">
+		<tr style="vertical-align:top">
+			<td width="25%">
+				<div>
+					<div><b> UserId 10 - OWNER </b>
+					</div>
+				</div>
+				<div >
+					<button type="button" onclick="connect(10)" style="background-color: GreenYellow ;">Connect</button>
+				</div>
+
+				<div> REQUEST FLOOR:	<br>
+				<div id="divFloorRequest10"></div>
+				<div id="divBeneficiary10">
+					<input type="radio" name="beneficiary10" id="bMe10" class="radioBenefMe" value="0" checked="checked">For myself<br>
+					<input type="radio" name="beneficiary10" id="bAnother10" class="radioBenefAnother" value="1">For another user
+					<input type="text" id="txtBeneficiaryId10" size="5" >
+					<br>
+				</div>
+					<button type="button" onclick="requestFloor(10)">Request!!!</button>
+				</div>
+				<br>
+				<div id="divMsg10" class="divMsg"></div>
+				<div> FLOOR STATUS </div>
+				<div id="divFloorStatus10"></div>
+				<button type="button" onclick="releaseFloor(10)">Release Floor</button>
+
+			</td>
+			<td width="25%" style="vertical-align:top">
+			<div>
+					<div><b> UserId 11 </b>
+					</div>
+				</div>
+				<div >
+					<button type="button" onclick="connect(11)" style="background-color: GreenYellow ;">Connect</button>
+				</div>
+
+				<div> REQUEST FLOOR:	<br>
+				<div id="divFloorRequest11"></div>
+				<div id="divBeneficiary11">
+					<input type="radio" name="beneficiary11" id="bMe11" class="radioBenefMe" value="0" checked="checked">For myself<br>
+					<input type="radio" name="beneficiary11" id="bAnother11" class="radioBenefAnother" value="1">For another user
+					<input type="text" id="txtBeneficiaryId11" size="5">
+					<br>
+				</div>
+					<button type="button" onclick="requestFloor(11)">Request!!!</button>
+				</div>
+				<br>
+				<div id="divMsg11" class="divMsg"></div>
+				<div> FLOOR STATUS </div>
+				<div id="divFloorStatus11"></div>
+				<button type="button" onclick="releaseFloor(11)">Release Floor</button>
+
+
+			</td>
+			<td width="25%">
+				<div>
+					<div><b> UserId 12 </b>
+					</div>
+				</div>
+				<div >
+					<button type="button" onclick="connect(12)" style="background-color: GreenYellow ;">Connect</button>
+				</div>
+
+				<div> REQUEST FLOOR:	<br>
+				<div id="divFloorRequest12"></div>
+				<div id="divBeneficiary12">
+					<input type="radio" name="beneficiary12" id="bMe12" value="0" class="radioBenefMe" checked="checked">For myself<br>
+					<input type="radio" name="beneficiary12" id="bAnother12" class="radioBenefAnother" value="1">For another user
+					<input type="text" id="txtBeneficiaryId12" size="5">
+					<br>
+				</div>
+					<button type="button" onclick="requestFloor(12)">Request!!!</button>
+				</div>
+
+				<br>
+				<div id="divMsg12" class="divMsg"></div>
+				<div> FLOOR STATUS </div>
+				<div id="divFloorStatus12"></div>
+				<button type="button" onclick="releaseFloor(12)">Release Floor</button>
+
+			</td>
+			<td width="25%">
+				<div>
+					<div><b> UserId 13 </b>
+					</div>
+				</div>
+				<div >
+					<button type="button" onclick="connect(13)" style="background-color: GreenYellow ;">Connect</button>
+				</div>
+
+				<div> REQUEST FLOOR:	<br>
+				<div id="divFloorRequest13"></div>
+				<div id="divBeneficiary13">
+					<input type="radio" name="beneficiary13" id="bMe13" class="radioBenefMe" value="0" checked="checked">For myself<br>
+					<input type="radio" name="beneficiary13" id="bAnother13" class="radioBenefAnother" value="1">For another user
+					<input type="text" id="txtBeneficiaryId13" size="5">
+					<br>
+				</div>
+					<button type="button" onclick="requestFloor(13)">Request!!!</button>
+				</div>
+
+				<br>
+				<div id="divMsg13" class="divMsg"></div>
+				<div> FLOOR STATUS </div>
+				<div id="divFloorStatus13"></div>
+				<button type="button" onclick="releaseFloor(13)">Release Floor</button>
+			</td>
+		</tr>
+	</table>
+	</div>
+
+	<script>QUnit.start();</script>
+</body>
+</html>

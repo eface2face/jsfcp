@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="ISO-8859-1">
+	<title>Checking JsFCP </title>
+	<script type="text/javascript" src="jquery.min.js"></script>
+    <script type="text/javascript" src="tAgent.js"></script>
+    <script type="text/javascript" src="../build/jsfcp-last.js"></script>
+</head>
+<body>
+	<table >
+		<tr style="vertical-align:top">
+			<td width="20%">
+				<div>
+					<div> UserId:3
+						<input type="text" id="txtUserId" value="10">
+					</div>
+					<div> ConferenceId:
+						<input type="text" id="txtConferenceId" value=1001>
+					</div>
+					<div> Web Socket Server:
+						<select id="slcWss">
+						  <option value="ws://localhost:8888">LOCALHOST</option>
+						  <option value="ws://85.84.251.14:9090/bfcp/1001/10"  selected="selected" >IÑAKI</option>
+						</select>
+					</div>
+				</div>
+				<br>
+				<br>
+				<div >
+					<button type="button" onclick="connect()" style="background-color: green;">Connect</button>
+				</div>
+				<div >
+					<button type="button" onclick="sendHello()">Send Hello</button>
+					<button type="button" onclick="queryFloors()">Query all floors</button>
+				</div>
+				<!--  div >
+					<button type="button" onclick="TESTCHAIRACTION()" >TEST CHAIR ACTION</button>
+				</div>	-->
+			</td>
+			<td width="20%" style="vertical-align:top">
+				<div> FLOOR STATUS </div>
+				<div id="divFloorStatus"></div>
+			</td>
+
+			<td width="20%">
+				<div> REQUEST FLOOR:	<br>
+				<div id="divFloorRequest"></div>
+				<div id="divBeneficiary">
+					<input type="radio" name="beneficiary" id="bMe" value="0" checked="true">For myself<br>
+					<input type="radio" name="beneficiary" id="bAnother" value="1">For another user
+					<input type="text" id="txtBeneficiaryId">
+					<br>
+				</div>
+
+				<button type="button" onclick="requestFloor()">Request!!!</button>
+					<!-- input type="checkbox" name="chkFloorType" value="1"><span class="employeeName"></span><br>
+					<input type="checkbox" name="chkFloorType" value="2">EDITOR
+				 -->
+				</div>
+			</td>
+			<td width="20%">
+				<div> FLOOR RELEASE:
+					<div id="divFloorRelease"></div>
+					<button type="button" onclick="releaseFloor()">Release Floor</button>
+				</div>
+			</td>
+		</tr>
+	</table>
+</body>
+</html>

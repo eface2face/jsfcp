@@ -1,0 +1,562 @@
+/**
+ * @fileoverview Conference
+ */
+
+/**
+ * @class Conference
+ */
+(function(VersaConference) {
+	var
+		Conference,
+		Participant,
+		C = {
+			// Participant states
+			STATUS_UNKNOWN: 'unknown',
+			STATUS_OFFLINE: 'offline',
+			STATUS_ONLINE:  'online',
+			STATUS_JOINED:  'joined',
+			STATUS_PAUSED:  'paused'
+		};
+
+	/*
+	 * participants:
+	 *
+	 *	{
+	 *		me: { id: 'alice' },
+	 *		others: [
+	 *			{ id: 'bob' },
+	 *			{ id: 'carol' }
+	 *		]
+	 *	}
+	 */
+	Conference = function(jssipConfig, participants) {
+		var
+			self = this,
+			events = [
+				'connecting',
+				'muted',
+				'unmuted',
+				'newMessage',
+				'newRTCSession',
+				'rtcSessionFailed',
+				'statusChanged'
+			],
+			participant;
+
+		/**
+		 * @class Participant
+		 */
+		Participant = function(id) {
+			this.id = id;
+			this.status = C.STATUS_UNKNOWN;
+			this.session = null;
+			this.hasAudio = false;
+			this.hasVideo = false;
+			this.muted = false;  // Just useful for local user.
+		};
+
+		// Fill the 'participants' object and the user identifier
+		this.me =  new Participant(participants.me.id);
+		this.me.status = C.STATUS_OFFLINE;
+
+		// Note that this.participants won't include me.
+		this.participants = {};
+		for (var i=0; i < participants.others.length; i++) {
+			participant = new Participant(participants.others[i].id);
+			this.participants[participant.id] = participant;
+		}
+
+		this.mediaStream = null;
+
+		// Start the UA
+		this.ua = new JsSIP.UA(jssipConfig);
+
+		this.ua.on('connecting', function(){
+			self.emit('connecting', self);
+		});
+
+		this.ua.on('connected', function(){
+			var status = self.ua.status;
+
+			self.ua.register();
+
+			self.me.status = C.STATUS_ONLINE;
+			self.announceStatus(status);
+		});
+
+		this.ua.on('disconnected', function(){
+			var
+				status = self.me.status,
+				participant;
+
+
+			self.ua.unregister();
+			self.me.status = C.STATUS_OFFLINE;
+
+			self.emit('statusChanged', self, {
+				id: self.me.id,
+				previous: status,
+				status: self.me.status
+			});
+
+			for (var id in self.participants) {
+				participant = self.participants[id];
+				if (participant.session) {
+					participant.session.terminate({
+						'cause': 'disconnected'
+					});
+				}
+				self.onParticipantStatusReceived(participant, C.STATUS_UNKNOWN);
+			}
+		});
+
+		this.ua.on('newRTCSession', function(e){
+			var
+				session = e.data.session,
+				participant = self.participants[session.remote_identity.uri.user],
+				myPriority;
+
+
+			// There is an ongoing session with the participant.
+			if (participant.session) {
+				// The ongoing session is not yet confirmed.
+				if (session.status !== JsSIP.RTCSession.C.STATUS_CONFIRMED) {
+					if (session.direction === 'incoming') {
+						// An outgoing session is already being established.
+						if (participant.session === 'outgoing') {
+							myPriority = participant.session.request.getHeader('X-Priority');
+							// The Incoming session has a lower priority. Terminate it.
+							if (session.request.getHeader('X-Priority') < myPriority){
+								session.terminate({
+									extraHeaders: ['X-Priority: '+ myPriority]
+								});
+								participant.session = null;
+								return;
+							}
+							// The Incoming session has a higher priority. Terminate the outgoing one.
+							else {
+								participant.session.terminate({
+									extraHeaders: ['X-Priority :'+ myPriority]
+								});
+								participant.session = null;
+							}
+						}
+					}
+				}
+			}
+
+			session.on('failed', function(e){
+				/* Do not fire the event if the failed session has been replaced for another one.
+				 * Ie: if it has been replaced due to collision and priority matter.
+				 */
+				if (session === participant.session) {
+					participant.session = null;
+
+					self.emit('rtcSessionFailed', self, {
+						id: participant.id,
+						cause: e.data.cause
+					});
+				}
+			});
+
+			session.on('started',function(){
+				self.emit('newRTCSession', self, {
+					id: participant.id,
+					mediaStream: session.getRemoteStreams()[0]
+				});
+			});
+
+			session.on('ended',function(e){
+				if (session === participant.session) {
+					participant.session = null;
+				}
+
+				if (e.data.cause) {
+					self.emit('rtcSessionFailed', self, {
+						id: participant.id,
+						cause: e.data.cause
+					});
+				}
+			});
+
+			participant.session = session;
+
+			if (session.direction === 'incoming') {
+				session.answer({
+					'mediaConstraints': {
+						'audio': true,
+						'video': true
+					},
+					'mediaStream': self.mediaStream
+				});
+			}
+		});
+
+		this.ua.on('newMessage', function(e){
+			var participant = self.participants[e.data.message.remote_identity.uri.user];
+			var status = e.data.request.getHeader('X-Status');
+			var hasAudio = e.data.request.getHeader('X-Has-Audio') === 'true';
+			var hasVideo = e.data.request.getHeader('X-Has-Video') === 'true';
+
+			if (e.data.request.hasHeader('X-Status')) {
+				if (e.data.message.direction === 'incoming') {
+					e.data.message.accept({
+						'extraHeaders': [
+							'X-Status: ' + self.me.status,
+							'X-Has-Audio: ' + self.me.hasAudio,
+							'X-Has-Video: ' + self.me.hasVideo
+						]
+					});
+					self.onParticipantStatusReceived(participant, status, hasAudio, hasVideo);
+				}
+			} else {
+				self.emit('newMessage', self, {
+					id: participant.id,
+					text: e.data.request.body
+				});
+			}
+		});
+
+		this.initEvents(events);
+	};
+
+	Conference.prototype = new VersaConference.EventEmitter();
+
+	Conference.prototype.start = function(errorCallback){
+		var self = this;
+
+		// Check user status
+		if (this.me.status !== C.STATUS_OFFLINE) {
+			throw new VersaConference.Exceptions.InvalidStateError(this.me.status);
+		}
+
+		function disconnected() {
+			self.ua.removeListener('registered', registered);
+			self.ua.removeListener('registrationFailed', registrationFailed);
+			self.ua.stop();
+			errorCallback();
+
+		}
+
+		function registrationFailed() {
+			self.ua.removeListener('disconnected', disconnected);
+			self.ua.removeListener('registered', registered);
+			self.ua.stop();
+			errorCallback();
+		}
+
+		function registered() {
+			self.ua.removeListener('disconnected', disconnected);
+			self.ua.removeListener('registrationFailed', registrationFailed);
+		}
+
+		this.ua.once('disconnected', function(){
+			disconnected();
+		});
+
+		this.ua.once('registrationFailed', function(){
+			registrationFailed();
+		});
+
+		this.ua.once('registered', function(){
+			registered();
+		});
+
+		this.ua.start();
+	};
+
+	Conference.prototype.stop = function(){
+		// Check user status
+		if (this.me.status === C.STATUS_OFFLINE) {
+			throw new VersaConference.Exceptions.InvalidStateError(this.me.status);
+		}
+
+		var status = this.me.status;
+
+		this.me.status = C.STATUS_OFFLINE;
+		this.announceStatus(status);
+		this.ua.stop();
+	};
+
+	Conference.prototype.join = function(mediaStream){
+		// Check user status
+		if (this.me.status !== C.STATUS_ONLINE) {
+			throw new VersaConference.Exceptions.InvalidStateError(this.me.status);
+		}
+
+		var self = this;
+		var status = this.me.status;
+
+		if (mediaStream.getAudioTracks().length > 0) {
+			this.me.hasAudio = true;
+		} else {
+			this.me.hasAudio = false;
+		}
+		if (mediaStream.getVideoTracks().length > 0) {
+			this.me.hasVideo = true;
+		} else {
+			this.me.hasVideo = false;
+		}
+
+		this.mediaStream = mediaStream;
+		this.me.status = C.STATUS_JOINED;
+		this.me.muted = false;
+		this.announceStatus(status, [C.STATUS_JOINED, C.STATUS_PAUSED], function(id){
+			self.call(id);
+		});
+	};
+
+	Conference.prototype.leave = function(){
+		// Check user status
+		if (this.me.status !== C.STATUS_JOINED && this.me.status !== C.STATUS_PAUSED) {
+			throw new VersaConference.Exceptions.InvalidStateError(this.me.status);
+		}
+
+		var
+			status = this.me.status,
+			participant;
+
+		this.me.status = C.STATUS_ONLINE;
+		if (this.me.muted === true) {
+			this.me.muted = false;
+			this.emit('unmuted', this);
+		}
+		this.announceStatus(status);
+
+		for (var id in this.participants) {
+			participant = this.participants[id];
+			if (participant.session) {
+				participant.session.terminate();
+			}
+		}
+	};
+
+	Conference.prototype.pause = function(){
+		// Check user status
+		if (this.me.status !== C.STATUS_JOINED) {
+			throw new VersaConference.Exceptions.InvalidStateError(this.me.status);
+		}
+
+		var status = this.me.status;
+
+		this.toogleMuteAudio(true);
+		this.toogleMuteVideo(true);
+		this.me.status = C.STATUS_PAUSED;
+		this.announceStatus(status);
+	};
+
+	Conference.prototype.resume = function(){
+		// Check user status
+		if (this.me.status !== C.STATUS_PAUSED) {
+			throw new VersaConference.Exceptions.InvalidStateError(this.me.status);
+		}
+
+		var status = this.me.status;
+
+		if (this.me.muted === false) {
+			this.toogleMuteAudio(false);
+		}
+
+		this.toogleMuteVideo(false);
+		this.me.status = C.STATUS_JOINED;
+		this.announceStatus(status);
+	};
+
+	Conference.prototype.mute = function(){
+		// Check user status
+		if (this.me.status !== C.STATUS_JOINED && this.me.status !== C.STATUS_PAUSED) {
+			throw new VersaConference.Exceptions.InvalidStateError(this.me.status);
+		}
+
+		if (this.me.muted === false) {
+			this.me.muted = true;
+			this.toogleMuteAudio(true);
+			this.emit('muted', this);
+		}
+	};
+
+	Conference.prototype.unmute = function(){
+		// Check user status
+		if (this.me.status !== C.STATUS_JOINED && this.me.status !== C.STATUS_PAUSED) {
+			throw new VersaConference.Exceptions.InvalidStateError(this.me.status);
+		}
+
+		if (this.me.muted === true) {
+			this.me.muted = false;
+			if (this.me.status !== C.STATUS_PAUSED) {
+				this.toogleMuteAudio(false);
+			}
+			this.emit('unmuted', this);
+		}
+	};
+
+	Conference.prototype.sendMessage = function(text){
+		var
+			self = this,
+			participant;
+
+		function sendMessage(participant) {
+			self.ua.sendMessage(participant.id, text);
+		}
+
+		// Check user status
+		if (this.me.status !== C.STATUS_ONLINE && this.me.status !== C.STATUS_JOINED && this.me.status !== C.STATUS_PAUSED) {
+			throw new VersaConference.Exceptions.InvalidStateError(this.me.status);
+		}
+
+		for (var id in this.participants) {
+			participant = this.participants[id];
+			if (participant.status !== C.STATUS_UNKNOWN && participant.status !== C.STATUS_OFFLINE) {
+				sendMessage(participant);
+			}
+		}
+	};
+
+	Conference.prototype.getStatus = function(id) {
+		if (id) {
+			return this.participants[id].status;
+		} else {
+			return this.me.status;
+		}
+	};
+
+	Conference.prototype.isMuted = function() {
+		return this.me.muted;
+	};
+
+	Conference.prototype.isMe = function(id) {
+		return id === this.me.id;
+	};
+
+	// Private methods
+
+	Conference.prototype.call = function(id) {
+		var
+			self = this;
+
+		// If there is a call being established or already established, skip.
+		if (this.participants[id].session){
+			return;
+		}
+
+		self.ua.call(id, {
+			'extraHeaders': ['X-Priority: '+ VersaConference.Utils.createRandomPriority()],
+			'mediaConstraints': {
+				'audio': true,
+				'video': true
+			},
+			'RTCOfferConstraints': {
+				'mandatory': {
+					'OfferToReceiveAudio':true,
+					'OfferToReceiveVideo':true
+				}
+			},
+			'mediaStream': self.mediaStream
+		});
+	};
+
+	Conference.prototype.announceStatus = function(previous, condition, callback){
+		var
+			self = this,
+			status = this.me.status,
+			participant;
+
+		// Function to be executed for each corresponding participant
+		function announceStatus(participant) {
+			self.ua.sendMessage(participant.id, '', {
+				'extraHeaders': [
+					'X-Status: ' + status,
+					'X-Has-Audio: ' + self.me.hasAudio,
+					'X-Has-Video: ' + self.me.hasVideo
+				],
+				'eventHandlers': {
+					'succeeded': function(e){
+						var status = e.data.response.getHeader('X-Status');
+						var hasAudio = e.data.response.getHeader('X-Has-Audio') === 'true';
+						var hasVideo = e.data.response.getHeader('X-Has-Video') === 'true';
+
+						if (self.me.status === C.STATUS_OFFLINE) {
+							return;
+						}
+
+						if (status) {
+							self.onParticipantStatusReceived(participant, status, hasAudio, hasVideo);
+						}
+
+						// run the callback, if convenient
+						if (callback) {
+							if (condition === undefined || condition.indexOf(status) !== -1) {
+								// TODO: no sé qué es ese array y si necesita participant.id o participant o qué.
+								callback.apply(self, [participant.id]);
+							}
+						}
+					},
+					'failed': function(e){
+						if (e.data.cause !== JsSIP.C.causes.CONNECTION_ERROR) {
+							self.onParticipantStatusReceived(participant, C.STATUS_UNKNOWN);
+						}
+					}
+				}
+			});
+		}
+
+		this.emit('statusChanged', this, {
+			id: this.me.id,
+			previous: previous,
+			current: status,
+			hasAudio: this.me.hasAudio,
+			hasVideo: this.me.hasVideo
+		});
+
+		for (var id in this.participants) {
+			participant = this.participants[id];
+			announceStatus(participant);
+		}
+	};
+
+	Conference.prototype.toogleMuteAudio = function(mute) {
+		var i, tracks;
+
+		tracks = this.mediaStream.getAudioTracks();
+		for (i in tracks) {
+			tracks[i].enabled = !mute;
+		}
+	};
+
+	Conference.prototype.toogleMuteVideo = function(mute) {
+		var i, tracks;
+
+		tracks = this.mediaStream.getVideoTracks();
+		for (i in tracks) {
+			tracks[i].enabled = !mute;
+		}
+	};
+
+	// Conference Callbacks
+
+	Conference.prototype.onParticipantStatusReceived = function(participant, status, hasAudio, hasVideo){
+		if (this.me.status === C.STATUS_OFFLINE) {
+			return;
+		}
+
+		var previous;
+
+		if (participant.status !== status) {
+			previous = participant.status;
+			participant.status = status;
+			participant.hasAudio = hasAudio;
+			participant.hasVideo = hasVideo;
+			this.emit('statusChanged', this, {
+				id: participant.id,
+				previous: previous,
+				current: status,
+				hasAudio: hasAudio,
+				hasVideo: hasVideo
+			});
+		}
+	};
+
+	Conference.Participant = Participant;
+	Conference.C = C;
+	VersaConference.Conference = Conference;
+}(VersaConference));
