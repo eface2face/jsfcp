@@ -71,6 +71,7 @@ The main class. It represents a peer that connects via WebSocket to the BFCP ser
 #### new JsFCP.Participant(conferenceId, userId, ws_uri, floorIds)
 
 Parameters:
+
 * `conferenceId` {Integer}: The conference id.
 * `userId` {Integer}: The user id.
 * `ws_uri` {String}: The WebSocket URI.
@@ -81,6 +82,7 @@ Parameters:
 Request one or varios floors.
 
 Parameters:
+
 * `events` {Object}: Object with the desired callbacks:
   * `pending` {Function}: Called when the FloorRequest gets "Pending" status.
   * `accepted` {Function}: Called when the FloorRequest gets "Accepted" status.
