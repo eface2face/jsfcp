@@ -14,19 +14,19 @@
 		C = {
 			MAX_LISTENERS: 10
 		};
-	
-	EventType = {			
+
+	EventType = {
 			EV_WS_OPENED : "onWsOpened",
 			EV_WS_CLOSED : "onWsClosed",
 			EV_WS_ERROR : "onWsError",
-			
+
 			EV_FL_REQUEST_STATUS : "onFloorRequestStatus",
 			EV_USER_STATUS : "onUserStatus",
 			EV_FL_STATUS : "onFloorStatus",
 			EV_CHAIR_ACK : "onChairActionAck",
 			EV_HELLO_ACK : "onHelloAck",
 			EV_ERROR_RESPONSE : "onErrorResponse",
-			
+
 			EV_FLOORLIST_UPDATED : "onFloorListUpdated",
 			EV_USERLIST_UPDATED : "onUserListUpdated"
 	};
@@ -186,10 +186,10 @@
 				return;
 			}
 
-			
+
 			listeners = this.events[event];
 			length = listeners.length;
-      
+
 			e = new JsFCP.Event(event, sender, data);
 
 			// Fire event listeners
@@ -215,12 +215,12 @@
 		this.sender= sender;
 		this.data = data;
 	};
-	
-	
+
+
 	EventEmitter.C = C;
 
 	JsFCP.EventEmitter = EventEmitter;
 	JsFCP.Event = Event;
 	JsFCP.EventType = EventType;
-	
+
 }(JsFCP));
