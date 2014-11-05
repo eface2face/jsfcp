@@ -75,7 +75,7 @@ Parameters:
 * `conferenceId` {Integer}: The conference id.
 * `userId` {Integer}: The user id.
 * `ws_uri` {String}: The WebSocket URI.
-* `floorIds`{Array(Integer)}: Array of floor ids.
+* `floorIds` {Array(Integer)}: Array of floor ids.
 
 #### Attributes
 
