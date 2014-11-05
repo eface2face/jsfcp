@@ -5,10 +5,10 @@ module.exports = function(grunt) {
 	// Banner.
 	var banner = require('fs').readFileSync('banner.txt').toString();
 
-	// Generated build.
-	var build = {
-		dist: 'build/<%= pkg.name %>-<%= pkg.version %>.js',
-		last: 'build/<%= pkg.name %>-last.js',
+	// Generated bundles.
+	var bundles = {
+		uncompressed: 'bundles/<%= pkg.name %>-<%= pkg.version %>.js',
+		last: 'bundles/<%= pkg.name %>-last.js',
 	};
 
 	grunt.initConfig({
@@ -47,10 +47,17 @@ module.exports = function(grunt) {
 			}
 		},
 
+		nodeunit: {
+			all: [ 'test/*.js' ],
+			options: {
+				reporter: 'default'
+			}
+		},
+
 		browserify: {
-			dist: {
+			uncompressed: {
 				files: {
-					'build/<%= pkg.name %>-<%= pkg.version %>.js': [ 'lib/JsFCP.js' ]
+					'bundles/<%= pkg.name %>-<%= pkg.version %>.js': [ 'lib/JsFCP.js' ]
 				},
 				options: {
 					browserifyOptions: {
@@ -61,9 +68,9 @@ module.exports = function(grunt) {
 		},
 
 		concat: {
-			dist: {
-				src: build.dist,
-				dest: build.dist,
+			uncompressed: {
+				src: bundles.uncompressed,
+				dest: bundles.uncompressed,
 				options: {
 					banner: banner,
 					separator: '\n\n'
@@ -72,14 +79,20 @@ module.exports = function(grunt) {
 			}
 		},
 
-		qunit: {
-			files: [ 'test/*.html' ]
+		symlink: {
+			options: {
+				overwrite: true
+			},
+			last: {
+				src: bundles.uncompressed,
+				dest: bundles.last
+			}
 		},
 
 		uglify: {
-			dist: {
+			uncompressed: {
 				files: {
-					'build/<%= pkg.name %>-<%= pkg.version %>.min.js': [ build.dist ]
+					'bundles/<%= pkg.name %>-<%= pkg.version %>.min.js': [ bundles.uncompressed ]
 				}
 			},
 			options: {
@@ -88,22 +101,12 @@ module.exports = function(grunt) {
 		},
 
 		watch: {
-			dist: {
+			all: {
 				files: [ 'lib/**/*.js' ],
-				tasks: [ 'dist' ],
+				tasks: [ 'test' ],
 				options: {
 					nospawn: true
 				}
-			}
-		},
-
-		symlink: {
-			options: {
-				overwrite: true
-			},
-			last: {
-				src: build.dist,
-				dest: build.last
 			}
 		}
 	});
@@ -111,20 +114,20 @@ module.exports = function(grunt) {
 
 	// Load Grunt plugins.
 	grunt.loadNpmTasks('grunt-contrib-jshint');
+	grunt.loadNpmTasks('grunt-contrib-nodeunit');
 	grunt.loadNpmTasks('grunt-contrib-concat');
+	grunt.loadNpmTasks('grunt-contrib-symlink');
 	grunt.loadNpmTasks('grunt-contrib-uglify');
 	grunt.loadNpmTasks('grunt-contrib-watch');
-	grunt.loadNpmTasks('grunt-contrib-symlink');
 	grunt.loadNpmTasks('grunt-browserify');
-	grunt.loadNpmTasks('grunt-contrib-qunit');
 
 
-	// Taks for building build/jsfcp-X.Y.Z.js, build/jsfcp-last.js symlink and build/jsfcp-X.Y.Z.min.js.
-	grunt.registerTask('dist', [ 'jshint:each_file', 'browserify:dist', 'concat:dist', 'symlink:last', 'uglify:dist' ]);
+	// Taks for building bundles/jsfcp-X.Y.Z.js, bundles/jsfcp-last.js symlink and bundles/jsfcp-X.Y.Z.min.js.
+	grunt.registerTask('bundle', [ 'jshint:each_file', 'browserify:uncompressed', 'concat:uncompressed', 'symlink:last', 'uglify:uncompressed' ]);
 
 	// Test task.
-	grunt.registerTask('test', [ 'qunit' ]);
+	grunt.registerTask('test', [ 'nodeunit:all' ]);
 
-	// Default task is an alias for 'dist'.
-	grunt.registerTask('default', [ 'dist' ]);
+	// Default task is an alias for 'test' and 'bundle'.
+	grunt.registerTask('default', [ 'test', 'bundle' ]);
 };
