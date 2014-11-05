@@ -24,19 +24,19 @@ Run test units:
 
 ### Browserified library
 
-    $ grunt dist
+    $ grunt bundle
 
 It generates two libraries, both of them exposing the global `window.JsFCP` namespace:
 
-* `build/jsfcp-X.Y.Z.js`: The uncompressed version.
-* `build/jsfcp-X.Y.Z.min.js`: The minified production-ready version.
+* `bundles/jsfcp-X.Y.Z.js`: The uncompressed version.
+* `bundles/jsfcp-X.Y.Z.min.js`: The minified production-ready version.
 
-It also generates a soft link `build/jsfcp-last.js` pointing to the uncompressed version.
+It also generates a soft link `bundles/jsfcp-last.js` pointing to the uncompressed version.
 
 
 ## Usage in the browser
 
-Copy the browserified and minified version into your web tree and load it as usual:
+Copy the minified version into your web tree and load it as usual:
 
     <script src='js/jsfcp-X.Y.Z.min.js'></script>
 
