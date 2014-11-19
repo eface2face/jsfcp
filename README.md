@@ -66,7 +66,7 @@ In order to enable it by default, add the following after the `<script>` tag:
 Add the module to the `dependencies` field within the `package.json` file of your Node project:
 
     "dependencies": {
-      "jsfcp": "git+ssh://git@git.assembla.com:ef2f-js.jsfcp.git"
+      "jsfcp": "git+ssh://git@git.assembla.com:ef2f-js.jsfcp.git#0.1.0"
     }
 
 **NOTE:** You need an already set SSH key as Git authentication mechanism.
