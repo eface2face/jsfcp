@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "debug": "^2.1.0",
-    "ws": "~0.4.32"
+    "websocket": "~1.0.12"
   },
   "devDependencies": {
     "grunt": "~0.4.5",
