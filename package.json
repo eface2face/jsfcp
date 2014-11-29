@@ -1,12 +1,12 @@
 {
   "name": "jsfcp",
   "description": "JavaScript BFCP client implementation using WebSocket as transport and JSON as message format.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": "Carmen Carrion <carmen.carrion@eface2face.com>",
   "contributors": [
-    "Iñaki Baz Castillo <ibc@aliax.net>"
+    "Iñaki Baz Castillo <inaki.baz@eface2face.com>"
   ],
-  "license": "private",
+  "license": "All Rights Reserved",
   "main": "lib/JsFCP.js",
   "homepage": "https://www.assembla.com/code/ef2f-js/git-2/nodes/",
   "repository": {

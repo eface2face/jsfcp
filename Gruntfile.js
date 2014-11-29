@@ -6,9 +6,9 @@ module.exports = function(grunt) {
 	var banner = require('fs').readFileSync('banner.txt').toString();
 
 	// Generated bundles.
-	var bundles = {
-		uncompressed: 'bundles/<%= pkg.name %>-<%= pkg.version %>.js',
-		last: 'bundles/<%= pkg.name %>-last.js',
+	var dist = {
+		uncompressed: 'dist/<%= pkg.name %>-<%= pkg.version %>.js',
+		last: 'dist/<%= pkg.name %>-last.js',
 	};
 
 	grunt.initConfig({
@@ -57,7 +57,7 @@ module.exports = function(grunt) {
 		browserify: {
 			uncompressed: {
 				files: {
-					'bundles/<%= pkg.name %>-<%= pkg.version %>.js': [ 'lib/JsFCP.js' ]
+					'dist/<%= pkg.name %>-<%= pkg.version %>.js': [ 'lib/JsFCP.js' ]
 				},
 				options: {
 					browserifyOptions: {
@@ -69,8 +69,8 @@ module.exports = function(grunt) {
 
 		concat: {
 			uncompressed: {
-				src: bundles.uncompressed,
-				dest: bundles.uncompressed,
+				src: dist.uncompressed,
+				dest: dist.uncompressed,
 				options: {
 					banner: banner,
 					separator: '\n\n'
@@ -84,15 +84,15 @@ module.exports = function(grunt) {
 				overwrite: true
 			},
 			last: {
-				src: bundles.uncompressed,
-				dest: bundles.last
+				src: dist.uncompressed,
+				dest: dist.last
 			}
 		},
 
 		uglify: {
 			uncompressed: {
 				files: {
-					'bundles/<%= pkg.name %>-<%= pkg.version %>.min.js': [ bundles.uncompressed ]
+					'dist/<%= pkg.name %>-<%= pkg.version %>.min.js': [ dist.uncompressed ]
 				}
 			},
 			options: {
@@ -122,7 +122,7 @@ module.exports = function(grunt) {
 	grunt.loadNpmTasks('grunt-browserify');
 
 
-	// Taks for building bundles/jsfcp-X.Y.Z.js, bundles/jsfcp-last.js symlink and bundles/jsfcp-X.Y.Z.min.js.
+	// Taks for building dist/jsfcp-X.Y.Z.js, dist/jsfcp-last.js symlink and dist/jsfcp-X.Y.Z.min.js.
 	grunt.registerTask('bundle', [ 'jshint:each_file', 'browserify:uncompressed', 'concat:uncompressed', 'symlink:last', 'uglify:uncompressed' ]);
 
 	// Test task.
