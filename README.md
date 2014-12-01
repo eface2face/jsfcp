@@ -24,14 +24,14 @@ Run test units:
 
 ### Browserified library
 
-    $ grunt bundle
+    $ grunt dist
 
 It generates two libraries, both of them exposing the global `window.JsFCP` namespace:
 
-* `bundles/jsfcp-X.Y.Z.js`: The uncompressed version.
-* `bundles/jsfcp-X.Y.Z.min.js`: The minified production-ready version.
+* `dist/jsfcp-X.Y.Z.js`: The uncompressed version.
+* `dist/jsfcp-X.Y.Z.min.js`: The minified production-ready version.
 
-It also generates a soft link `bundles/jsfcp-last.js` pointing to the uncompressed version.
+It also generates a soft link `dist/jsfcp-last.js` pointing to the uncompressed version.
 
 
 ## Usage in the browser

@@ -124,11 +124,11 @@ module.exports = function(grunt) {
 
 
 	// Taks for building dist/jsfcp-X.Y.Z.js, dist/jsfcp-last.js symlink and dist/jsfcp-X.Y.Z.min.js.
-	grunt.registerTask('bundle', [ 'jshint:each_file', 'browserify:uncompressed', 'concat:uncompressed', 'symlink:last', 'uglify:uncompressed' ]);
+	grunt.registerTask('dist', [ 'jshint:each_file', 'browserify:uncompressed', 'concat:uncompressed', 'symlink:last', 'uglify:uncompressed' ]);
 
 	// Test task.
 	grunt.registerTask('test', [ 'nodeunit:all' ]);
 
-	// Default task is an alias for 'test' and 'bundle'.
-	grunt.registerTask('default', [ 'test', 'bundle' ]);
+	// Default task is an alias for 'test' and 'dist'.
+	grunt.registerTask('default', [ 'test', 'dist' ]);
 };
