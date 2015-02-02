@@ -83,8 +83,7 @@ Fired when the WebSocket is disconnected.
 
 Parameters:
 
-* `data` {Object}: Object with these fields:
-  * `local` {Boolean}: `true` if `close()` was called. Otherwise (`false`) means unsolicited WebSocket server disconnection or network error.
+* `local` {Boolean}: `true` if `close()` was called. Otherwise (`false`) means unsolicited WebSocket server disconnection or network error.
 
 
 ### "floorGranted" event

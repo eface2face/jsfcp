@@ -1,5 +1,5 @@
 /*
- * JsFCP v0.1.7
+ * JsFCP v0.1.8
  * JavaScript BFCP client implementation using WebSocket as transport and JSON as message format
  * Copyright 2013-2015 eFace2Face, inc. All Rights Reserved
  */
@@ -1300,8 +1300,8 @@ function Participant(pConferenceId, pUserId, pWss, pFloors) {
 		self.queryFloor(pFloors);
 	});
 
-	this.transport.on('disconnected', function(data) {
-		self.emit('disconnected', data);
+	this.transport.on('disconnected', function(local) {
+		self.emit('disconnected', local);
 	});
 
 	this.transport.on('response', function(json) {
@@ -1526,7 +1526,7 @@ function Transport(pMessageFactory, pWss) {
 		};
 
 		this.webSocket.onclose = function() {
-			self.emit('disconnected', {local: self.closed});
+			self.emit('disconnected', self.closed);
 		};
 
 		this.webSocket.onerror = function() {
