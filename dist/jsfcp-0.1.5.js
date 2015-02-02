@@ -1,5 +1,5 @@
 /*
- * JsFCP v0.1.4
+ * JsFCP v0.1.5
  * JavaScript BFCP client implementation using WebSocket as transport and JSON as message format
  * Copyright 2013-2015 eFace2Face, inc. All Rights Reserved
  */
