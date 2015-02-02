@@ -1,5 +1,5 @@
 /*
- * JsFCP v0.1.5
+ * JsFCP v0.1.6
  * JavaScript BFCP client implementation using WebSocket as transport and JSON as message format
  * Copyright 2013-2015 eFace2Face, inc. All Rights Reserved
  */
@@ -759,15 +759,6 @@ function MessageFactory(pUserId, pConferenceId) {
 	this.userId = pUserId;
 }
 
-MessageFactory.prototype.sendWsMessage = function (message) {
-	if(this.isWebSocketReady())	{
-		this.webSocket.send(message);
-	}
-	else {
-		throw new Exceptions.NoWebSocketException();
-	}
-};
-
 MessageFactory.prototype.getPriorityValues = function() {
 	return priorityValues;
 };
@@ -1133,10 +1124,6 @@ function isValidErrorValue(value) {
 	return false;
 }
 
-MessageFactory.prototype.isWebSocketReady = function() {
-	return this.webSocket && this.webSocket.readyState === this.webSocket.OPEN;
-};
-
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++//
 //							OPERATIONS						//
@@ -1281,6 +1268,8 @@ module.exports = Participant;
  * Dependencies.
  */
 var debug = require('debug')('JsFCP:Participant');
+var debugerror = require('debug')('JsFCP:ERROR:Participant');
+debugerror.log = console.warn.bind(console);
 var EventEmitter = require('events').EventEmitter;
 var MessageFactory = require('./MessageFactory');
 var Transport = require('./Transport');
@@ -1302,22 +1291,23 @@ function Participant(pConferenceId, pUserId, pWss, pFloors) {
 	this.floorQuery = null;
 	this.messageFactory = new MessageFactory(this.userId, this.conferenceId);
 	this.transport = new Transport(this.messageFactory, pWss);
+	this.closed = false;  // true when close() is called.
 
 	this.transport.on('connected', function() {
-		self.queryFloor(pFloors);
 		self.emit('connected');
+		self.queryFloor(pFloors);
 	});
 
-	this.transport.on('disconnected', function() {
-		self.emit('disconnected');
+	this.transport.on('disconnected', function(data) {
+		self.emit('disconnected', data);
 	});
 
-	this.transport.on('response', function(e) {
-		self.manageResponse(e.data);
+	this.transport.on('response', function(json) {
+		self.manageResponse(json);
 	});
 
-	this.transport.on('notification', function(e) {
-		self.manageNotification(e.data);
+	this.transport.on('notification', function(json) {
+		self.manageNotification(json);
 	});
 }
 
@@ -1330,6 +1320,7 @@ function Participant(pConferenceId, pUserId, pWss, pFloors) {
  */
 Participant.prototype = new EventEmitter();
 
+// TODO: Remove this function.
 Participant.prototype.isWebSocketReady = function() {
 	return this.transport.isWebSocketReady();
 };
@@ -1411,6 +1402,8 @@ Participant.prototype.requestFloor = function(events,
 	pPriority,
 	pParticipantProvidedInfo)
 {
+	debug('requestFloor() | floorIds: %o', pArrayFloorIds);
+
 	if(!Array.isArray(pArrayFloorIds) || pArrayFloorIds.length === 0) {
 		throw new TypeError('pArrayFloorIds must be an array with at least one element');
 	}
@@ -1431,6 +1424,8 @@ Participant.prototype.requestFloor = function(events,
 };
 
 Participant.prototype.release = function(events, floorRequest) {
+	debug('release() | floorRequest: %o', floorRequest);
+
 	var floorRequestId = null;
 
 	if(floorRequest instanceof FloorRequest) {
@@ -1454,6 +1449,8 @@ Participant.prototype.release = function(events, floorRequest) {
 };
 
 Participant.prototype.queryFloor = function(pArrayFloorIds) {
+	debug('queryFloor() | floorIds: %o', pArrayFloorIds);
+
 	var self = this;
 
 	if(pArrayFloorIds.length > 0) {
@@ -1479,6 +1476,15 @@ Participant.prototype.queryFloor = function(pArrayFloorIds) {
 	// }
 };
 
+
+Participant.prototype.close = function() {
+	debug('close()');
+
+	if (this.closed) { return; }
+
+	this.transport.close();
+};
+
 },{"./FloorQuery":2,"./FloorRelease":3,"./FloorRequest":4,"./MessageFactory":6,"./Transport":8,"debug":10,"events":9}],8:[function(require,module,exports){
 module.exports = Transport;
 
@@ -1499,6 +1505,8 @@ function Transport(pMessageFactory, pWss) {
 
 	var self = this;
 
+	this.closed = false;  // true when close() is called.
+
 	try {
 		this.webSocket = new WebSocket(pWss);
 
@@ -1511,7 +1519,7 @@ function Transport(pMessageFactory, pWss) {
 		};
 
 		this.webSocket.onclose = function() {
-			self.emit('disconnected');
+			self.emit('disconnected', {local: self.closed});
 		};
 
 		this.webSocket.onerror = function() {
@@ -1542,7 +1550,7 @@ Transport.prototype.isWebSocketReady = function() {
 Transport.prototype.send = function(msg) {
 	var message = JSON.stringify(msg);
 
-	if(this.isWebSocketReady())	{
+	if (this.isWebSocketReady())	{
 		this.webSocket.send(message);
 	}
 	else {
@@ -1551,20 +1559,22 @@ Transport.prototype.send = function(msg) {
 };
 
 Transport.prototype.onReceive = function(msg) {
+	debug('onReceive() | msg: %o', msg);
+
 	var json;
 
 	try {
 		json = JSON.parse(msg.data);
 	}
 	catch(e) {
-		debug('received msg is not valid JSON');
+		debug('onReceive() | received msg is not valid JSON');
 		return;
 	}
 
 	try {
 		this.messageFactory.isValidHeaderFormat(json);
 
-		if(!this.messageFactory.isMine(json)) {
+		if (!this.messageFactory.isMine(json)) {
 			return;
 		}
 
@@ -1574,18 +1584,24 @@ Transport.prototype.onReceive = function(msg) {
 			// transactionId == 0 -> Notification
 			var transactionId = json[MessageFactory.C.HD_TRANSACTION_ID];
 			// Notification
-			if(transactionId === 0) {
-				this.emit('onNotification', json);
+			if (transactionId === 0) {
+				this.emit('notification', json);
 			}
 			// Response
 			else {
-				this.emit('onResponse', json);
+				this.emit('response', json);
 			}
 		}
 	}
 	catch(e) {
 		throw e;
 	}
+};
+
+
+Transport.prototype.close = function() {
+	this.closed = true;
+	this.webSocket.close();
 };
 
 },{"./Exceptions":1,"./MessageFactory":6,"debug":10,"events":9,"websocket":13}],9:[function(require,module,exports){

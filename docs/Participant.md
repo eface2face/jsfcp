@@ -62,6 +62,11 @@ Parameters:
 * `floorRequest` {JsFCP.FloorRequest|Integer}: The instance of `FloorRequest` or its numeric id to be cancelled or released.
 
 
+### `close()` 
+
+Closes the WebSocket transport. Will emit "disconnected".
+
+
 ## Events
 
 The `Participant` class inherints the methods of the Node's [EventEmitter](http://nodejs.org/api/events.html#events_class_events_eventemitter).
@@ -71,9 +76,16 @@ The `Participant` class inherints the methods of the Node's [EventEmitter](http:
 
 Fired when the WebSocket is connected.
 
+
 ### "disconnected" event
 
 Fired when the WebSocket is disconnected.
+
+Parameters:
+
+* `data` {Object}: Object with these fields:
+  * `local` {Boolean}: `true` if `close()` was called. Otherwise (`false`) means unsolicited WebSocket server disconnection or network error.
+
 
 ### "floorGranted" event
 
@@ -85,6 +97,7 @@ Parameters:
   * `floorId` {Integer}: The floor being granted.
   * `beneficiaryId` {Integer}: The current owner of the floor.
   * `floorRequestId`: The identifier of the FloorRequest that obtained the floor (useful for thirdy-party FloorRelease by calling the `release()` method).
+
 
 #### "floorReleased" event
 
