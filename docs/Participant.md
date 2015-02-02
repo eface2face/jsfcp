@@ -2,7 +2,7 @@
 
 The main class. It represents a peer that connects via WebSocket to the BFCP server to send and receive BFCP messages.
 
-### `new JsFCP.Participant(conferenceId, userId, ws_uri, floorIds)``
+### `new JsFCP.Participant(conferenceId, userId, ws_uri, floorIds)`
 
 Parameters:
 
