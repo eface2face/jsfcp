@@ -1,5 +1,5 @@
 /*
- * JsFCP v0.1.8
+ * JsFCP v0.1.9
  * JavaScript BFCP client implementation using WebSocket as transport and JSON as message format
  * Copyright 2013-2015 eFace2Face, inc. All Rights Reserved
  */
@@ -1296,8 +1296,13 @@ function Participant(pConferenceId, pUserId, pWss, pFloors) {
 	this.closed = false;  // true when close() is called.
 
 	this.transport.on('connected', function() {
-		self.emit('connected');
 		self.queryFloor(pFloors);
+		self.emit('connected');
+	});
+
+	this.transport.on('reconnect', function() {
+		self.queryFloor(pFloors);
+		self.emit('connected');
 	});
 
 	this.transport.on('disconnected', function(local) {
@@ -1501,8 +1506,7 @@ var util = require('util');
 var EventEmitter = require('events').EventEmitter;
 var MessageFactory = require('./MessageFactory');
 var Exceptions = require('./Exceptions');
-// 'websocket' module uses the native WebSocket interface when bundled to run in a browser.
-var WebSocket = require('websocket').w3cwebsocket;  // jshint ignore:line
+var WebSocketWrapper = require('websocketwrapper');
 
 
 function Transport(pMessageFactory, pWss) {
@@ -1515,21 +1519,25 @@ function Transport(pMessageFactory, pWss) {
 	this.closed = false;  // true when close() is called.
 
 	try {
-		this.webSocket = new WebSocket(pWss);
+		this.ws = new WebSocketWrapper(pWss);
 
-		this.webSocket.onopen = function() {
+		this.ws.onopen = function() {
 			self.emit('connected');
 		};
 
-		this.webSocket.onmessage = function(msg) {
+		this.ws.onreconnect = function() {
+			self.emit('connected');
+		};
+
+		this.ws.onmessage = function(msg) {
 			self.onReceive(msg);
 		};
 
-		this.webSocket.onclose = function() {
+		this.ws.onclose = function() {
 			self.emit('disconnected', self.closed);
 		};
 
-		this.webSocket.onerror = function() {
+		this.ws.onerror = function() {
 			debugerror('WebSocket error');
 		};
 
@@ -1551,14 +1559,14 @@ function Transport(pMessageFactory, pWss) {
 util.inherits(Transport, EventEmitter);
 
 Transport.prototype.isWebSocketReady = function() {
-	return this.webSocket && this.webSocket.readyState === this.webSocket.OPEN;
+	return this.ws && this.ws.readyState === this.ws.OPEN;
 };
 
 Transport.prototype.send = function(msg) {
 	var message = JSON.stringify(msg);
 
 	if (this.isWebSocketReady())	{
-		this.webSocket.send(message);
+		this.ws.send(message);
 	}
 	else {
 		throw new Exceptions.NoWebSocketException();
@@ -1608,10 +1616,10 @@ Transport.prototype.onReceive = function(msg) {
 
 Transport.prototype.close = function() {
 	this.closed = true;
-	this.webSocket.close();
+	try { this.ws.close(); } catch(error) {}
 };
 
-},{"./Exceptions":1,"./MessageFactory":6,"debug":14,"events":9,"util":13,"websocket":17}],9:[function(require,module,exports){
+},{"./Exceptions":1,"./MessageFactory":6,"debug":14,"events":9,"util":13,"websocketwrapper":17}],9:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -3068,6 +3076,208 @@ function plural(ms, n, name) {
 }
 
 },{}],17:[function(require,module,exports){
+/**
+ * Expose the WebSocketWrapper class.
+ */
+module.exports = WebSocketWrapper;
+
+
+/**
+ * Dependencies.
+ */
+var debug = require('debug')('WebSocketWrapper');
+var debugerror = require('debug')('WebSocketWrapper:ERROR');
+debugerror.log = console.warn.bind(console);
+// 'websocket' module uses the native WebSocket interface when bundled to run in a browser.
+var W3CWebSocket = require('websocket').w3cwebsocket;
+
+
+function WebSocketWrapper(url, protocols, origin, headers, requestOptions, clientConfig) {
+	debug('new() | [url:%s, protocols:%s]', url, protocols);
+
+	var self = this;
+
+	// Create the native WebSocket instance.
+	this.createWebSocket = function() {
+		this.ws = new W3CWebSocket(url, protocols, origin, headers, requestOptions, clientConfig);
+
+		this.ws.onopen = function(e) {
+			_onopen.call(self, e);
+		};
+
+		this.ws.onerror = function(e) {
+			_onerror.call(self, e);
+		};
+
+		this.ws.onclose = function(e) {
+			_onclose.call(self, e);
+		};
+
+		if (this._onmessage) {
+			this.ws.onmessage = this._onmessage;
+		}
+
+		if (this._binaryType) {
+			this.ws.binaryType = this._binaryType;
+		}
+	};
+
+	this.createWebSocket();
+
+	// Flag indicating that WebSocket is closed by us.
+	this.closed = false;
+
+	// Flag indicating that an error happened while connecting.
+	this.hasError = false;
+
+	// Reconnecting flag.
+	this.isReconnecting = false;
+
+	// Reconnection timer.
+	this.reconnectionTimer = null;
+
+	// Reconnection delay.
+	this.reconnectionDelay = 2000;
+}
+
+
+// Expose W3C WebSocket attributes.
+Object.defineProperties(WebSocketWrapper.prototype, {
+    url:            { get: function() { return this.ws.url;            } },
+    readyState:     { get: function() { return this.ws.readyState;     } },
+    protocol:       { get: function() { return this.ws.protocol;       } },
+    extensions:     { get: function() { return this.ws.extensions;     } },
+    bufferedAmount: { get: function() { return this.ws.bufferedAmount; } },
+
+    CONNECTING:     { get: function() { return this.ws.CONNECTING;     } },
+    OPEN:           { get: function() { return this.ws.OPEN;           } },
+    CLOSING:        { get: function() { return this.ws.CLOSING;        } },
+    CLOSED:         { get: function() { return this.ws.CLOSED;         } },
+
+    // TODO: set when reconnected
+    binaryType: {
+        get: function() {
+            return this.ws.binaryType;
+        },
+        set: function(type) {
+        	this._binaryType = type;
+            this.ws.binaryType = type;
+        }
+    },
+
+    onmessage: {
+    	get: function() {
+    		return this.ws.onmessage;
+    	},
+    	set: function(handler) {
+    		this._onmessage = handler;
+    		this.ws.onmessage = handler;
+    	}
+    }
+});
+
+
+/**
+ * Public API.
+ */
+
+
+WebSocketWrapper.prototype.send = function(data) {
+	this.ws.send(data);
+};
+
+
+WebSocketWrapper.prototype.close = function(code, reason) {
+	debug('close() |[code:%d, reason:%s]', code, reason);
+
+	if (this.closed) { return; }
+	this.closed = true;
+
+	// Reset events.
+	this.onopen = null;
+	this.onerror = null;
+	this.onmessage = null;
+
+	// Stop the reconnection timer.
+	clearTimeout(this.reconnectionTimer);
+
+	if (this.ws.readyState === this.ws.CONNECTING || this.ws.readyState === this.ws.OPEN) {
+		this.ws.close(code, reason);
+	}
+};
+
+
+WebSocketWrapper.prototype.setReconnectionDelay = function(delay) {
+	this.reconnectionDelay = delay;
+};
+
+
+/**
+ * Private API.
+ */
+
+
+function _onopen(e) {
+	// First connection.
+	if (! this.isReconnecting) {
+		debug('onopen()');
+
+		if (this.onopen) {
+			this.onopen(e);
+		}
+	}
+	// Reconnection.
+	else {
+		debug('onreconnect()');
+
+		if (this.onreconnect) {
+			this.onreconnect(e);
+		}
+		else if (this.onopen) {
+			this.onopen(e);
+		}
+	}
+}
+
+
+function _onerror(e) {
+	debugerror('onerror() | event: %o', e);
+
+	this.hasError = true;
+
+	if (this.onerror) {
+		this.onerror(e);
+	}
+}
+
+
+function _onclose(e) {
+	debugerror('onclose() | event: %o', e);
+
+	var self = this;
+
+	if (this.onclose) {
+		this.onclose(e);
+	}
+
+	// Don't try to reconnect if we closed the connection.
+	if (this.closed) { return; }
+
+	// Don't try to reconnect if an error happened while connecting.
+	if (this.hasError) { return; }
+	this.hasError = false;
+
+	if (this.reconnectionDelay) {
+		this.reconnectionTimer = setTimeout(function() {
+			debug('reconnecting ...');
+
+			self.isReconnecting = true;
+			self.createWebSocket();
+		}, this.reconnectionDelay);
+	}
+}
+
+},{"debug":14,"websocket":18}],18:[function(require,module,exports){
 var _global = (function() { return this; })();
 var nativeWebSocket = _global.WebSocket || _global.MozWebSocket;
 
@@ -3104,10 +3314,10 @@ module.exports = {
     'version'      : require('./version')
 };
 
-},{"./version":18}],18:[function(require,module,exports){
+},{"./version":19}],19:[function(require,module,exports){
 module.exports = require('../package.json').version;
 
-},{"../package.json":19}],19:[function(require,module,exports){
+},{"../package.json":20}],20:[function(require,module,exports){
 module.exports={
   "name": "websocket",
   "description": "Websocket Client & Server Library implementing the WebSocket protocol as specified in RFC 6455.",
