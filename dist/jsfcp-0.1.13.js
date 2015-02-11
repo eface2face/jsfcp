@@ -1,5 +1,5 @@
 /*
- * JsFCP v0.1.12
+ * JsFCP v0.1.13
  * JavaScript BFCP client implementation using WebSocket as transport and JSON as message format
  * Copyright 2013-2015 eFace2Face, inc. All Rights Reserved
  */
@@ -3252,7 +3252,7 @@ function _onerror(e) {
 
 
 function _onclose(e) {
-	debug('onclose() | [code:%s, reason:%s, wasClean:%s', e.code, e.reason, e.wasClean);
+	debug('onclose() | [code:%s, reason:"%s", wasClean:%s]', e.code, e.reason, e.wasClean);
 
 	var self = this;
 
