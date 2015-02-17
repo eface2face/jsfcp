@@ -1,5 +1,5 @@
 /*
- * JsFCP v0.1.13
+ * JsFCP v0.1.14
  * JavaScript BFCP client implementation using WebSocket as transport and JSON as message format
  * Copyright 2013-2015 eFace2Face, inc. All Rights Reserved
  */
@@ -3201,8 +3201,19 @@ WebSocketWrapper.prototype.close = function(code, reason) {
 	// Stop the reconnection timer.
 	clearTimeout(this.reconnectionTimer);
 
-	if (this.ws.readyState === this.ws.CONNECTING || this.ws.readyState === this.ws.OPEN) {
-		this.ws.close(code, reason);
+	if (this.ws.readyState === this.ws.OPEN) {
+		try {
+			this.ws.close(code, reason);
+		} catch(error) {
+			debugerror('close() | error closing the WebSocket: %o', error);
+		}
+	}
+	else if (this.ws.readyState === this.ws.CONNECTING) {
+		var ws = this.ws;
+
+		ws.onopen = function() {
+			try { ws.close(code, reason); } catch(error) {}
+		};
 	}
 };
 

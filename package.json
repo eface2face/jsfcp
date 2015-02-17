@@ -1,7 +1,7 @@
 {
   "name": "jsfcp",
   "description": "JavaScript BFCP client implementation using WebSocket as transport and JSON as message format",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "author": "Carmen Carrion <carmen.carrion@eface2face.com>",
   "contributors": [
     "Iñaki Baz Castillo <inaki.baz@eface2face.com>"
@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "debug": "^2.1.1",
-    "websocketwrapper": "^0.1.9"
+    "websocketwrapper": "^0.1.10"
   },
   "devDependencies": {
     "browserify": "^8.1.3",
