@@ -24,29 +24,21 @@ Install dependencies:
 
 ## `gulp` commands
 
-### `$ gulp dist`
+### `$ gulp`
 
-Generates two "browserified" libraries, both of them exposing the global `window.JsFCP` namespace:
-
-* `dist/jsfcp-X.Y.Z.js`: The uncompressed version.
-* `dist/jsfcp-X.Y.Z.min.js`: The minified production-ready version.
-
-### `$ gulp test`
-
-*TODO:* to be done.
-
-Runs test units.
+Generates two "browserified" library (exposing the global `window.JsFCP` namespace) at `dist/jsfcp.js`.
 
 
 ## Browserified standalone library
 
-Copy the uncompressed or compressed version into your web tree and load it as usual:
+Copy the browserified version into your web tree and load it as usual:
 
-    <script src='js/jsfcp-X.Y.Z.min.js'></script>
+    <script src='js/jsfcp.js'></script>
 
     <script>
         var participant = new JsFCP.Participant(conferenceId, userId, ws_uri, floorIds);
     </script>
+
 
 ### Debugging
 
@@ -62,7 +54,7 @@ Note that the logging settings get stored into the browser LocalStorage. To disa
 
 In order to enable it by default, add the following after the `<script>` tag:
 
-    <script src='js/jsfcp-X.Y.Z.min.js'></script>
+    <script src='js/jsfcp.js'></script>
     <script>JsFCP.debug.enable('JsFCP:*');</script>
 
 

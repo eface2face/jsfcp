@@ -1,9 +1,9 @@
 /*
- * JsFCP v0.1.16
+ * JsFCP v0.1.17
  * JavaScript BFCP client implementation using WebSocket as transport and JSON as message format
  * Copyright 2013-2015 eFace2Face, inc. All Rights Reserved
  */
-!function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.JsFCP=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.JsFCP = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 module.exports = {
 	InvalidMessageFormatPrimitive: (function(){
 		var exception = function(strJson) {
@@ -143,7 +143,7 @@ var MessageFactory = require('./MessageFactory');
 function FloorRelease(pEvents, pFloorRequestId, pBeneficiaryId){
 	this.beneficiaryId = pBeneficiaryId;
 	this.floorRequestId = pFloorRequestId;
-	this.onError = pEvents.error;
+	this.onError = pEvents.error || function() {};
 }
 
 FloorRelease.prototype.onMessageReceived = function(json) {
@@ -156,9 +156,7 @@ FloorRelease.prototype.onErrorReceived = function (error) {
 	var errorCode = error[MessageFactory.C.HD_ATTRIBUTES][MessageFactory.C.ATT_ERROR_CODE_NAM];
 	var errorInfo = error[MessageFactory.C.HD_ATTRIBUTES][MessageFactory.C.ATT_ERROR_INFO_NAM];
 
-	if(this.onError !== undefined) {
-		this.onError({'errorCode': errorCode, 'errorInfo': errorInfo});
-	}
+	this.onError({'errorCode': errorCode, 'errorInfo': errorInfo});
 };
 
 },{"./MessageFactory":6,"debug":14}],4:[function(require,module,exports){
@@ -179,14 +177,14 @@ function FloorRequest(pEvents, pBeneficiaryId) {
 	this.floorRequestId = null;
 	this.statusInfo = null;
 
-	this.onPending = pEvents.pending;
-	this.onAccepted = pEvents.accepted;
-	this.onGranted = pEvents.granted;
-	this.onDenied = pEvents.denied;
-	this.onCancelled = pEvents.cancelled;
-	this.onReleased = pEvents.released;
-	this.onRevoked = pEvents.revoked;
-	this.onError = pEvents.error;
+	this.onPending = pEvents.pending || function() {};
+	this.onAccepted = pEvents.accepted || function() {};
+	this.onGranted = pEvents.granted || function() {};
+	this.onDenied = pEvents.denied || function() {};
+	this.onCancelled = pEvents.cancelled || function() {};
+	this.onReleased = pEvents.released || function() {};
+	this.onRevoked = pEvents.revoked || function() {};
+	this.onError = pEvents.error || function() {};
 }
 
 FloorRequest.prototype.onMessageReceived = function(json) {
@@ -1953,32 +1951,66 @@ if (typeof Object.create === 'function') {
 var process = module.exports = {};
 var queue = [];
 var draining = false;
+var currentQueue;
+var queueIndex = -1;
+
+function cleanUpNextTick() {
+    draining = false;
+    if (currentQueue.length) {
+        queue = currentQueue.concat(queue);
+    } else {
+        queueIndex = -1;
+    }
+    if (queue.length) {
+        drainQueue();
+    }
+}
 
 function drainQueue() {
     if (draining) {
         return;
     }
+    var timeout = setTimeout(cleanUpNextTick);
     draining = true;
-    var currentQueue;
+
     var len = queue.length;
     while(len) {
         currentQueue = queue;
         queue = [];
-        var i = -1;
-        while (++i < len) {
-            currentQueue[i]();
+        while (++queueIndex < len) {
+            if (currentQueue) {
+                currentQueue[queueIndex].run();
+            }
         }
+        queueIndex = -1;
         len = queue.length;
     }
+    currentQueue = null;
     draining = false;
+    clearTimeout(timeout);
 }
+
 process.nextTick = function (fun) {
-    queue.push(fun);
-    if (!draining) {
+    var args = new Array(arguments.length - 1);
+    if (arguments.length > 1) {
+        for (var i = 1; i < arguments.length; i++) {
+            args[i - 1] = arguments[i];
+        }
+    }
+    queue.push(new Item(fun, args));
+    if (queue.length === 1 && !draining) {
         setTimeout(drainQueue, 0);
     }
 };
 
+// v8 likes predictible objects
+function Item(fun, array) {
+    this.fun = fun;
+    this.array = array;
+}
+Item.prototype.run = function () {
+    this.fun.apply(null, this.array);
+};
 process.title = 'browser';
 process.browser = true;
 process.env = {};
@@ -2000,7 +2032,6 @@ process.binding = function (name) {
     throw new Error('process.binding is not supported');
 };
 
-// TODO(shtylman)
 process.cwd = function () { return '/' };
 process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
@@ -3292,6 +3323,7 @@ function createWebSocket(url, protocols, origin, headers, requestOptions, client
 },{"debug":14,"websocket":18,"yaeti":21}],18:[function(require,module,exports){
 var _global = (function() { return this; })();
 var nativeWebSocket = _global.WebSocket || _global.MozWebSocket;
+var websocket_version = require('./version');
 
 
 /**
@@ -3323,7 +3355,7 @@ function W3CWebSocket(uri, protocols) {
  */
 module.exports = {
     'w3cwebsocket' : nativeWebSocket ? W3CWebSocket : null,
-    'version'      : require('./version')
+    'version'      : websocket_version
 };
 
 },{"./version":19}],19:[function(require,module,exports){
@@ -3350,7 +3382,14 @@ module.exports={
     "email": "brian@worlize.com",
     "url": "https://www.worlize.com/"
   },
-  "version": "1.0.19",
+  "contributors": [
+    {
+      "name": "Iñaki Baz Castillo",
+      "email": "ibc@aliax.net",
+      "url": "http://dev.sipdoc.net"
+    }
+  ],
+  "version": "1.0.22",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/theturtle32/WebSocket-Node.git"
@@ -3360,17 +3399,18 @@ module.exports={
     "node": ">=0.8.0"
   },
   "dependencies": {
-    "debug": "~2.1.0",
-    "nan": "1.8.x",
-    "typedarray-to-buffer": "~3.0.0"
+    "debug": "~2.2.0",
+    "nan": "~2.0.5",
+    "typedarray-to-buffer": "~3.0.3",
+    "yaeti": "~0.0.4"
   },
   "devDependencies": {
-    "buffer-equal": "0.0.1",
-    "faucet": "0.0.1",
+    "buffer-equal": "^0.0.1",
+    "faucet": "^0.0.1",
     "gulp": "git+https://github.com/gulpjs/gulp.git#4.0",
-    "gulp-jshint": "^1.9.0",
-    "jshint-stylish": "^1.0.0",
-    "tape": "^3.0.0"
+    "gulp-jshint": "^1.11.2",
+    "jshint-stylish": "^1.0.2",
+    "tape": "^4.0.1"
   },
   "config": {
     "verbose": false
@@ -3386,15 +3426,15 @@ module.exports={
   },
   "browser": "lib/browser.js",
   "license": "Apache-2.0",
-  "gitHead": "da3bd5b04e9442c84881b2e9c13432cdbbae1f16",
+  "gitHead": "19108bbfd7d94a5cd02dbff3495eafee9e901ca4",
   "bugs": {
     "url": "https://github.com/theturtle32/WebSocket-Node/issues"
   },
-  "_id": "websocket@1.0.19",
-  "_shasum": "e62dbf1a3c5e0767425db7187cfa38f921dfb42c",
+  "_id": "websocket@1.0.22",
+  "_shasum": "8c33e3449f879aaf518297c9744cebf812b9e3d8",
   "_from": "websocket@>=1.0.19 <2.0.0",
-  "_npmVersion": "2.10.1",
-  "_nodeVersion": "0.12.4",
+  "_npmVersion": "2.14.3",
+  "_nodeVersion": "3.3.1",
   "_npmUser": {
     "name": "theturtle32",
     "email": "brian@worlize.com"
@@ -3406,10 +3446,10 @@ module.exports={
     }
   ],
   "dist": {
-    "shasum": "e62dbf1a3c5e0767425db7187cfa38f921dfb42c",
-    "tarball": "http://registry.npmjs.org/websocket/-/websocket-1.0.19.tgz"
+    "shasum": "8c33e3449f879aaf518297c9744cebf812b9e3d8",
+    "tarball": "http://registry.npmjs.org/websocket/-/websocket-1.0.22.tgz"
   },
-  "_resolved": "https://registry.npmjs.org/websocket/-/websocket-1.0.19.tgz",
+  "_resolved": "https://registry.npmjs.org/websocket/-/websocket-1.0.22.tgz",
   "readme": "ERROR: No README data found!"
 }
 
