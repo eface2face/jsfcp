@@ -1,5 +1,5 @@
 /*
- * JsFCP v0.1.17
+ * JsFCP v0.1.18
  * JavaScript BFCP client implementation using WebSocket as transport and JSON as message format
  * Copyright 2013-2015 eFace2Face, inc. All Rights Reserved
  */
@@ -1291,19 +1291,26 @@ function Participant(pConferenceId, pUserId, pWss, pFloors) {
 	this.floorQuery = null;
 	this.messageFactory = new MessageFactory(this.userId, this.conferenceId);
 	this.transport = new Transport(this.messageFactory, pWss);
+	this.connected = false;  // Whether the transport is connected
 	this.closed = false;  // true when close() is called.
 
 	this.transport.on('connected', function() {
+		self.connected = true;
+
 		self.queryFloor(pFloors);
 		self.emit('connected');
 	});
 
 	this.transport.on('reconnect', function() {
+		self.connected = true;
+
 		self.queryFloor(pFloors);
 		self.emit('connected');
 	});
 
 	this.transport.on('disconnected', function(local) {
+		self.connected = false;
+
 		self.emit('disconnected', local);
 	});
 
@@ -1323,12 +1330,8 @@ function Participant(pConferenceId, pUserId, pWss, pFloors) {
  * - floorGranted
  * - floorReleased
  */
- util.inherits(Participant, EventEmitter);
+util.inherits(Participant, EventEmitter);
 
-// TODO: Remove this function.
-Participant.prototype.isWebSocketReady = function() {
-	return this.transport.isWebSocketReady();
-};
 
 Participant.prototype.manageResponse = function(json) {
 	// Check transactionId
@@ -1409,6 +1412,18 @@ Participant.prototype.requestFloor = function(events,
 {
 	debug('requestFloor() | floorIds: %o', pArrayFloorIds);
 
+	var self = this;
+
+	if (!this.connected) {
+		debug('requestFloor() | not connected, waiting for connection');
+
+		this.once('connected', function() {
+			self.requestFloor.apply(self, arguments);
+		});
+
+		return;
+	}
+
 	if(!Array.isArray(pArrayFloorIds) || pArrayFloorIds.length === 0) {
 		throw new TypeError('pArrayFloorIds must be an array with at least one element');
 	}
@@ -1431,7 +1446,18 @@ Participant.prototype.requestFloor = function(events,
 Participant.prototype.release = function(events, floorRequest) {
 	debug('release() | floorRequest: %o', floorRequest);
 
+	var self = this;
 	var floorRequestId = null;
+
+	if (!this.connected) {
+		debug('release() | not connected, waiting for connection');
+
+		this.once('connected', function() {
+			self.release.apply(self, arguments);
+		});
+
+		return;
+	}
 
 	if(floorRequest instanceof FloorRequest) {
 		floorRequestId = floorRequest.floorRequestId;
@@ -1457,6 +1483,16 @@ Participant.prototype.queryFloor = function(pArrayFloorIds) {
 	debug('queryFloor() | floorIds: %o', pArrayFloorIds);
 
 	var self = this;
+
+	if (!this.connected) {
+		debug('queryFloor() | not connected, waiting for connection');
+
+		this.once('connected', function() {
+			self.queryFloor.apply(self, arguments);
+		});
+
+		return;
+	}
 
 	if(pArrayFloorIds.length > 0) {
 		var transactionId = Math.floor(Math.random() * 10000);

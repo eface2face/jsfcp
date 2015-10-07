@@ -2,7 +2,7 @@
   "name": "jsfcp",
   "title": "JsFCP",
   "description": "JavaScript BFCP client implementation using WebSocket as transport and JSON as message format",
-  "version": "0.1.17",
+  "version": "0.1.18",
   "author": "Carmen Carrion <carmen.carrion@eface2face.com>",
   "contributors": [
     "Iñaki Baz Castillo <inaki.baz@eface2face.com>"
