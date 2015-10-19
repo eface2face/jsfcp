@@ -1,5 +1,5 @@
 /*
- * JsFCP v0.1.18
+ * JsFCP v0.1.19
  * JavaScript BFCP client implementation using WebSocket as transport and JSON as message format
  * Copyright 2013-2015 eFace2Face, inc. All Rights Reserved
  */
@@ -1417,8 +1417,10 @@ Participant.prototype.requestFloor = function(events,
 	if (!this.connected) {
 		debug('requestFloor() | not connected, waiting for connection');
 
+		var args = arguments;
+
 		this.once('connected', function() {
-			self.requestFloor.apply(self, arguments);
+			self.requestFloor.apply(self, args);
 		});
 
 		return;
@@ -1452,8 +1454,10 @@ Participant.prototype.release = function(events, floorRequest) {
 	if (!this.connected) {
 		debug('release() | not connected, waiting for connection');
 
+		var args = arguments;
+
 		this.once('connected', function() {
-			self.release.apply(self, arguments);
+			self.release.apply(self, args);
 		});
 
 		return;
@@ -1487,8 +1491,10 @@ Participant.prototype.queryFloor = function(pArrayFloorIds) {
 	if (!this.connected) {
 		debug('queryFloor() | not connected, waiting for connection');
 
+		var args = arguments;
+
 		this.once('connected', function() {
-			self.queryFloor.apply(self, arguments);
+			self.queryFloor.apply(self, args);
 		});
 
 		return;
