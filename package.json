@@ -2,7 +2,7 @@
   "name": "jsfcp",
   "title": "JsFCP",
   "description": "JavaScript BFCP client implementation using WebSocket as transport and JSON as message format",
-  "version": "0.1.19",
+  "version": "0.1.21",
   "author": "Carmen Carrion <carmen.carrion@eface2face.com>",
   "contributors": [
     "Iñaki Baz Castillo <inaki.baz@eface2face.com>"
@@ -16,18 +16,11 @@
   },
   "dependencies": {
     "debug": "^2.2.0",
-    "websocketwrapper": "^0.2.0"
+    "websocketwrapper": "^0.2.1"
   },
   "devDependencies": {
-    "browserify": "^11.2.0",
     "gulp": "git+https://github.com/gulpjs/gulp.git#4.0",
-    "gulp-header": "^1.7.1",
     "gulp-jshint": "^1.11.2",
-    "gulp-nodeunit-runner": "^0.2.2",
-    "jshint-stylish": "^2.0.1",
-    "vinyl-source-stream": "^1.1.0"
-  },
-  "scripts": {
-    "test": "gulp test"
+    "jshint-stylish": "^2.0.1"
   }
 }

@@ -1,5 +1,0 @@
-/*
- * JsFCP v<%= pkg.version %>
- * <%= pkg.description %>
- * Copyright 2013-<%= currentYear %> eFace2Face, inc. <%= pkg.license %>
- */
