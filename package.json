@@ -9,11 +9,6 @@
   ],
   "license": "All Rights Reserved",
   "main": "lib/JsFCP.js",
-  "homepage": "https://www.assembla.com/code/ef2f-js/git-2/nodes/",
-  "repository": {
-    "type": "git",
-    "url": "git@git.assembla.com:ef2f-js.jsfcp.git"
-  },
   "dependencies": {
     "debug": "^2.2.0",
     "websocketwrapper": "^0.2.2"

@@ -3,5 +3,5 @@
 
 ## API
 
-* [Participant](docs/Participant.md)
+* [Participant](Participant.md)
 
